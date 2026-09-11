@@ -14,8 +14,11 @@ def stable_softmax(logits):
     temp = np.sum(logits, axis=-1, keepdims=True)
     return logits/temp
 
-# Step 2 - apply_temperature (not yet solved)
-# TODO: implement
+# Step 2 - apply_temperature
+def apply_temperature(logits, temperature):
+    if temperature > 0:
+        return logits/temperature
+    return logits
 
 # Step 3 - top_k_filter (not yet solved)
 # TODO: implement
