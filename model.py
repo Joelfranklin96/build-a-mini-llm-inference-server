@@ -173,10 +173,7 @@ def causal_attention(q, k, v, is_causal=True):
     raw_scores = raw_scores/D**0.5
     mask = np.tril(np.ones((Tq, Tk), dtype=bool), k=Tk - Tq)
     if is_causal:
-        if Tq == Tk:
-            out = np.where(mask, raw_scores, -np.inf)
-        else:
-            out = raw_scores
+        out = np.where(mask, raw_scores, -np.inf)
     else:
         out = raw_scores
     
