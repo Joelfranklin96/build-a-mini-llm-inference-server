@@ -20,150 +20,188 @@ def apply_temperature(logits, temperature):
         return logits/temperature
     return logits
 
-# Step 3 - top_k_filter (not yet solved)
-# TODO: implement
+# Step 3 - top_k_filter
+import numpy as np
 
-# Step 4 - top_p_filter (not yet solved)
-# TODO: implement
+def top_k_filter(logits, k):
+    """Mask logits outside the top-k per row to -inf."""
+    
+    v = logits.shape[-1]
+    if k >= v:
+        return logits
+    
+    kth = np.partition(logits, -k)[..., v-k]
+    kth = np.expand_dims(kth, axis=-1)
+    out = np.where(logits >= kth, logits, -np.inf)
+    return out.astype(logits.dtype, copy=False)
 
-# Step 5 - sample_from_probs (not yet solved)
-# TODO: implement
+# Step 4 - top_p_filter
+import numpy as np
 
-# Step 6 - greedy_select (not yet solved)
-# TODO: implement
+def top_p_filter(logits, p):
+    order = np.argsort(-logits, axis=-1)
+    sorted_logits = np.take_along_axis(logits, order, axis=-1)
 
-# Step 7 - build_vocab (not yet solved)
-# TODO: implement
+    shifted = sorted_logits - np.max(sorted_logits, axis=-1, keepdims=True)
+    exp = np.exp(shifted)
+    probs = exp / np.sum(exp, axis=-1, keepdims=True)
 
-# Step 8 - encode_prompt (not yet solved)
-# TODO: implement
+    cum = np.cumsum(probs, axis=-1)
+    keep_sorted = (cum - probs) < p
+    keep_sorted[..., 0] = True
 
-# Step 9 - decode_tokens (not yet solved)
-# TODO: implement
+    keep = np.empty_like(keep_sorted)
+    np.put_along_axis(keep, order, keep_sorted, axis=-1)
 
-# Step 10 - embed_tokens (not yet solved)
-# TODO: implement
+    return np.where(keep, logits, -np.inf).astype(logits.dtype, copy=False)
 
-# Step 11 - linear_projection (not yet solved)
-# TODO: implement
+# Step 5 - sample_from_probs
+import numpy as np
 
-# Step 12 - init_kv_cache (not yet solved)
-# TODO: implement
+def sample_from_probs(probs, rng):
+    cum_probs = np.cumsum(probs)
+    random_num = rng.random()
+    
+    for i in range(len(cum_probs)):
+        if random_num < cum_probs[i]:
+            return i
+    
+    for i in range(len(probs)-1, -1, -1):
+        if probs[i] > 0:
+            return i
 
-# Step 13 - append_kv (not yet solved)
-# TODO: implement
+# Step 6 - greedy_select
+def greedy_select(logits):
+    max_index = 0
+    max_value = logits[0]
+    for i in range(len(logits)):
+        if logits[i] > max_value:
+            max_index = i
+            max_value = logits[i]
+    return max_index
 
-# Step 14 - causal_attention (not yet solved)
-# TODO: implement
+# Step 7 - build_vocab
+def build_vocab(corpus, special_tokens):
+    token_to_id = {}
+    unique_char = set()
+    
+    for string in corpus:
+        for char in string:
+            if char not in unique_char:
+                unique_char.add(char)
 
-# Step 15 - model_prefill (not yet solved)
-# TODO: implement
+    unique_char = list(unique_char)
+    unique_char.sort()
+    total_unique_char = special_tokens + unique_char
 
-# Step 16 - model_decode_step (not yet solved)
-# TODO: implement
+    for i, char in enumerate(total_unique_char):
+        token_to_id[char] = i
+    
+    return {'token_to_id': token_to_id, 'id_to_token': total_unique_char}
 
-# Step 17 - blocks_needed (not yet solved)
-# TODO: implement
+# Step 8 - encode_prompt
+def encode_prompt(text, vocab, add_bos=True):
+    token_to_id = vocab['token_to_id']
+    res = []
+    unk_present = '<unk>' in token_to_id
+    if add_bos:
+        res.append(token_to_id['<bos>'])
+    
+    for char in text:
+        if char in token_to_id:
+            res.append(token_to_id[char])
+        else:
+            if unk_present:
+                res.append(token_to_id['<unk>'])
+    return res
 
-# Step 18 - init_block_allocator (not yet solved)
-# TODO: implement
+# Step 9 - decode_tokens
+def decode_tokens(token_ids, vocab, skip_special=True):
+    id_to_token = vocab['id_to_token']
+    res = []
+    for t_id in token_ids:
+        token = id_to_token[t_id]
+        if token[0] == "<" and token[-1] == ">":
+            if not(skip_special):
+                res.append(token)
+        else:
+            res.append(token)
+    
+    return "".join(res)
 
-# Step 19 - allocate_block (not yet solved)
-# TODO: implement
+# Step 10 - embed_tokens
+import numpy as np
 
-# Step 20 - free_block (not yet solved)
-# TODO: implement
+def embed_tokens(token_ids, embedding_matrix):
+    return embedding_matrix[token_ids]
 
-# Step 21 - append_to_paged_cache (not yet solved)
-# TODO: implement
+# Step 11 - linear_projection
+def linear_projection(x, weight, bias=None):
+    if bias is not None:
+        out = np.matmul(x, weight) + bias
+    else:
+        out = np.matmul(x, weight)
+    return out
 
-# Step 22 - gather_kv_from_blocks (not yet solved)
-# TODO: implement
+# Step 12 - init_kv_cache
+import numpy as np
 
-# Step 23 - paged_attention_step (not yet solved)
-# TODO: implement
+def init_kv_cache(max_seq_len, d_model):
+    K = np.zeros((max_seq_len, d_model), dtype=np.float32)
+    V = np.zeros((max_seq_len, d_model), dtype=np.float32)
+    length = 0
+    return {'K': K, 'V': V, 'length': length}
 
-# Step 24 - free_sequence_blocks (not yet solved)
-# TODO: implement
+# Step 13 - append_kv
+import numpy as np
 
-# Step 25 - kv_blocks_in_use (not yet solved)
-# TODO: implement
+def append_kv(cache, k_new, v_new):
+    length = cache['length']
+    t = k_new.shape[0]
+    cache['K'][length:length + t, :] = k_new
+    cache['V'][length:length + t, :] = v_new
+    cache['length'] += t
+    return cache
 
-# Step 26 - make_request (not yet solved)
-# TODO: implement
+# Step 14 - causal_attention
+import numpy as np
 
-# Step 27 - init_sequence_state (not yet solved)
-# TODO: implement
+def causal_attention(q, k, v, is_causal=True):
+    Tq, D = q.shape
+    Tk, D = k.shape
+    raw_scores = np.matmul(q, np.transpose(k))
+    raw_scores = raw_scores/D**0.5
+    mask = np.tril(np.ones((Tq, Tk), dtype=bool), k=Tk - Tq)
+    if is_causal:
+        if Tq == Tk:
+            out = np.where(mask, raw_scores, -np.inf)
+        else:
+            out = raw_scores
+    else:
+        out = raw_scores
+    
+    out = stable_softmax(out)
+    return np.matmul(out, v)
 
-# Step 28 - sequence_decode_step (not yet solved)
-# TODO: implement
-
-# Step 29 - is_sequence_done (not yet solved)
-# TODO: implement
-
-# Step 30 - generate_single_sequence (not yet solved)
-# TODO: implement
-
-# Step 31 - build_batch_step_input (not yet solved)
-# TODO: implement
-
-# Step 32 - batched_decode_step (not yet solved)
-# TODO: implement
-
-# Step 33 - static_batch_generate (not yet solved)
-# TODO: implement
-
-# Step 34 - has_free_capacity (not yet solved)
-# TODO: implement
-
-# Step 35 - continuous_batch_step (not yet solved)
-# TODO: implement
-
-# Step 36 - run_continuous_batching (not yet solved)
-# TODO: implement
-
-# Step 37 - priority_queue_push (not yet solved)
-# TODO: implement
-
-# Step 38 - priority_queue_pop (not yet solved)
-# TODO: implement
-
-# Step 39 - select_admissions (not yet solved)
-# TODO: implement
-
-# Step 40 - preempt_sequence (not yet solved)
-# TODO: implement
-
-# Step 41 - schedule_step (not yet solved)
-# TODO: implement
-
-# Step 42 - format_stream_chunk (not yet solved)
-# TODO: implement
-
-# Step 43 - submit_request (not yet solved)
-# TODO: implement
-
-# Step 44 - drive_until_complete (not yet solved)
-# TODO: implement
-
-# Step 45 - collect_request_output (not yet solved)
-# TODO: implement
-
-# Step 46 - build_completion_response (not yet solved)
-# TODO: implement
-
-# Step 47 - time_to_first_token (not yet solved)
-# TODO: implement
-
-# Step 48 - inter_token_latency (not yet solved)
-# TODO: implement
-
-# Step 49 - aggregate_throughput (not yet solved)
-# TODO: implement
-
-# Step 50 - latency_percentiles (not yet solved)
-# TODO: implement
-
-# Step 51 - run_throughput_latency_benchmark (not yet solved)
-# TODO: implement
+# Step 15 - model_prefill
+def model_prefill(token_ids, params):
+    embedding_matrix = params['embedding']
+    embeddings = embed_tokens(token_ids, embedding_matrix)
+    Wq = params['Wq']
+    Wk = params['Wk']
+    Wv = params['Wv']
+    Wo = params['Wo']
+    W_out = params['W_out']
+    max_seq_len = params['max_seq_len']
+    Q = linear_projection(embeddings, Wq)
+    K = linear_projection(embeddings, Wk)
+    V = linear_projection(embeddings, Wv)
+    d_model = K.shape[-1]
+    cache = init_kv_cache(max_seq_len, d_model)
+    cache = append_kv(cache, K, V)
+    output = causal_attention(Q, K, V, is_causal=True)
+    final_output = np.matmul(output, Wo)
+    last_position = final_output[-1]
+    logits = np.matmul(last_position.astype(np.float64), W_out.astype(np.float64))
+    return (logits, cache)
 
