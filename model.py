@@ -202,3 +202,29 @@ def model_prefill(token_ids, params):
     logits = np.matmul(last_position.astype(np.float64), W_out.astype(np.float64))
     return (logits, cache)
 
+# Step 16 - model_decode_step
+def model_decode_step(token_id, cache, params):
+    """Advance generation by one token using the existing KV cache."""
+    embedding_matrix = params['embedding']
+    Wq = params['Wq']
+    Wk = params['Wk']
+    Wv = params['Wv']
+    Wo = params['Wo']
+    W_out = params['W_out']
+
+    new_token_embedding = embed_tokens([token_id], embedding_matrix)
+    new_k = linear_projection(new_token_embedding, Wk)
+    new_v = linear_projection(new_token_embedding, Wv)
+    new_q = linear_projection(new_token_embedding, Wq)
+    cache = append_kv(cache, new_k, new_v)
+
+    length = cache['length']
+    K = cache['K'][0:length]
+    V = cache['V'][0:length]
+
+    output = causal_attention(new_q, K, V, is_causal=True)
+    final_output = linear_projection(output, Wo)
+    logits = np.matmul(final_output, W_out)
+    logits = logits[0]
+    return (logits, cache)
+
