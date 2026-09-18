@@ -228,3 +228,7 @@ def model_decode_step(token_id, cache, params):
     logits = logits[0]
     return (logits, cache)
 
+# Step 17 - blocks_needed
+def blocks_needed(num_tokens, block_size):
+    return int(np.ceil(num_tokens/block_size))
+
