@@ -27,6 +27,7 @@ python scaffold.py
 - [x] **15.** model_prefill
 - [x] **16.** model_decode_step
 - [x] **17.** blocks_needed
+- [x] **18.** init_block_allocator
 
 ---
 
