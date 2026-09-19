@@ -276,8 +276,8 @@ def append_to_paged_cache(allocator, seq_id, k_new, v_new):
             allocate_block(allocator, seq_id)
         block_id = allocator['seq_tables'][seq_id][-1]
         n = min(block_size - slot, t - written)
-        allocator['K_blocks'][block_id, slot:slot+n, :] = k_new[written: written+n]
-        allocator['V_blocks'][block_id, slot:slot+n, :] = v_new[written: written+n]
+        allocator['K_blocks'][block_id, slot:slot+n, :] = k_new[written: written+n, :]
+        allocator['V_blocks'][block_id, slot:slot+n, :] = v_new[written: written+n, :]
         written += n
 
     lengths[seq_id] = L + t
