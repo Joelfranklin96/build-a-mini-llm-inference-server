@@ -291,3 +291,9 @@ def gather_kv_from_blocks(allocator, seq_id):
     v = allocator['V_blocks'][block_ids].reshape(-1, d_model)[:L]
     return (k, v)
 
+# Step 23 - paged_attention_step
+def paged_attention_step(q, allocator, seq_id):
+    k, v = gather_kv_from_blocks(allocator, seq_id)
+    output = causal_attention(q, k, v, is_causal=True)
+    return output.astype(np.float64)
+
