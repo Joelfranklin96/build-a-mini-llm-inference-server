@@ -42,9 +42,11 @@ def top_p_filter(logits, p):
     order = np.argsort(-logits, axis=-1)
     sorted_logits = np.take_along_axis(logits, order, axis=-1)
 
-    shifted = sorted_logits - np.max(sorted_logits, axis=-1, keepdims=True)
-    exp = np.exp(shifted)
-    probs = exp / np.sum(exp, axis=-1, keepdims=True)
+    #shifted = sorted_logits - np.max(sorted_logits, axis=-1, keepdims=True)
+    #exp = np.exp(shifted)
+    #probs = exp / np.sum(exp, axis=-1, keepdims=True)
+
+    probs = stable_softmax(sorted_logits)
 
     cum = np.cumsum(probs, axis=-1)
     keep_sorted = (cum - probs) < p
