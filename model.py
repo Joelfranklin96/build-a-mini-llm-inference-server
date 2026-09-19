@@ -318,3 +318,19 @@ def kv_blocks_in_use(allocator):
 def make_request(request_id, prompt_token_ids, max_new_tokens, sampling_params):
     return {'request_id': request_id, 'prompt_token_ids': list(prompt_token_ids), 'max_new_tokens': max_new_tokens, 'sampling_params': sampling_params}
 
+# Step 27 - init_sequence_state
+def init_sequence_state(request, params):
+    output = {}
+    output['request_id'] = request['request_id']
+    output['prompt_token_ids'] = request['prompt_token_ids']
+    gen = []
+    output['generated'] = gen
+    output['generated_token_ids'] = gen
+    logits, cache = model_prefill(request['prompt_token_ids'], params)
+    output['last_logits'] = logits
+    output['cache'] = cache
+    output['done'] = False
+    output['sampling_params'] = request['sampling_params']
+    output['max_new_tokens'] = request['max_new_tokens']
+    return output
+
