@@ -263,41 +263,22 @@ def free_block(allocator, block_id):
 # Step 21 - append_to_paged_cache
 def append_to_paged_cache(allocator, seq_id, k_new, v_new):
     """Write t new K/V rows into the sequence's paged blocks, allocating as needed."""
-    if 'seq_lengths' not in allocator:
-        allocator['seq_lengths'] = {}
-    
-    if seq_id not in allocator['seq_lengths']:
-        allocator['seq_lengths'][seq_id] = 0
-    
-    num_tokens = allocator['seq_lengths'][seq_id]
+    lengths = allocator.setdefault('seq_lengths', {})
+    L = lengths.get(seq_id, 0)
     block_size = allocator['block_size']
     t = k_new.shape[0]
 
-    if (num_tokens % block_size) != 0:
-        written = 0
-        partial_block = allocator['seq_tables'].get(seq_id)[-1]
-        starting_slot = num_tokens % block_size
-        empty_slots = min(t, block_size - starting_slot)
-        allocator['K_blocks'][partial_block, starting_slot:starting_slot+empty_slots, :] = k_new[:empty_slots, :]
-        allocator['V_blocks'][partial_block, starting_slot:starting_slot+empty_slots, :] = v_new[:empty_slots, :]
-        written += empty_slots
-        req_tokens = k_new.shape[0] - empty_slots
+    written = 0
+    while written < t:
+        pos = L + written
+        slot = pos % block_size
+        if slot == 0:                                   # all owned blocks are full
+            allocate_block(allocator, seq_id)
+        block_id = allocator['seq_tables'][seq_id][-1]
+        n = min(block_size - slot, t - written)         # rows that fit in this block
+        allocator['K_blocks'][block_id, slot:slot + n] = k_new[written:written + n]
+        allocator['V_blocks'][block_id, slot:slot + n] = v_new[written:written + n]
+        written += n
 
-    else:
-        written = 0
-        req_tokens = k_new.shape[0]
-    
-    req_blocks = blocks_needed(req_tokens, block_size)
-
-    for i in range(req_blocks):
-        block_id = allocate_block(allocator, seq_id)
-        if i != req_blocks - 1:
-            allocator['K_blocks'][block_id, :, :] = k_new[written:written+block_size, :]
-            allocator['V_blocks'][block_id, :, :] = v_new[written:written+block_size, :]
-            written += block_size
-        else:
-            rem_tokens = req_tokens - ((req_blocks - 1) * block_size)
-            allocator['K_blocks'][block_id, :rem_tokens, :] = k_new[written:written + rem_tokens, :]
-            allocator['V_blocks'][block_id, :rem_tokens, :] = v_new[written:written + rem_tokens, :]
-    allocator['seq_lengths'][seq_id] += k_new.shape[0]
+    lengths[seq_id] = L + t
 
