@@ -29,6 +29,7 @@ python scaffold.py
 - [x] **17.** blocks_needed
 - [x] **18.** init_block_allocator
 - [x] **19.** allocate_block
+- [x] **20.** free_block
 
 ---
 
