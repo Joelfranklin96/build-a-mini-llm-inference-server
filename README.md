@@ -34,6 +34,7 @@ python scaffold.py
 - [x] **22.** gather_kv_from_blocks
 - [x] **23.** paged_attention_step
 - [x] **24.** free_sequence_blocks
+- [x] **25.** kv_blocks_in_use
 
 ---
 
