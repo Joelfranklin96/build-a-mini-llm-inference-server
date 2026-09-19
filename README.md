@@ -35,6 +35,7 @@ python scaffold.py
 - [x] **23.** paged_attention_step
 - [x] **24.** free_sequence_blocks
 - [x] **25.** kv_blocks_in_use
+- [x] **26.** make_request
 
 ---
 

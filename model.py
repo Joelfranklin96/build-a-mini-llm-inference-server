@@ -314,3 +314,7 @@ def kv_blocks_in_use(allocator):
     used = total - free
     return {'used': used, 'free':free, 'total': total}
 
+# Step 26 - make_request
+def make_request(request_id, prompt_token_ids, max_new_tokens, sampling_params):
+    return {'request_id': request_id, 'prompt_token_ids': list(prompt_token_ids), 'max_new_tokens': max_new_tokens, 'sampling_params': sampling_params}
+
