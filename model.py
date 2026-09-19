@@ -272,12 +272,12 @@ def append_to_paged_cache(allocator, seq_id, k_new, v_new):
     while written < t:
         pos = L + written
         slot = pos % block_size
-        if slot == 0:                                   # all owned blocks are full
+        if slot == 0:                                   
             allocate_block(allocator, seq_id)
         block_id = allocator['seq_tables'][seq_id][-1]
-        n = min(block_size - slot, t - written)         # rows that fit in this block
-        allocator['K_blocks'][block_id, slot:slot + n] = k_new[written:written + n]
-        allocator['V_blocks'][block_id, slot:slot + n] = v_new[written:written + n]
+        n = min(block_size - slot, t - written)
+        allocator['K_blocks'][block_id, slot:slot+n, :] = k_new[written: written+n]
+        allocator['V_blocks'][block_id, slot:slot+n, :] = v_new[written: written+n]
         written += n
 
     lengths[seq_id] = L + t
