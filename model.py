@@ -234,8 +234,8 @@ def blocks_needed(num_tokens, block_size):
 
 # Step 18 - init_block_allocator
 def init_block_allocator(num_blocks, block_size, d_model):
-    K_blocks = np.zeros((num_blocks, block_size, d_model))
-    V_blocks = np.zeros((num_blocks, block_size, d_model))
+    K_blocks = np.zeros((num_blocks, block_size, d_model), dtype=np.float32)
+    V_blocks = np.zeros((num_blocks, block_size, d_model), dtype=np.float32)
 
     free_list = list(range(num_blocks))
     seq_tables = {}
@@ -281,4 +281,14 @@ def append_to_paged_cache(allocator, seq_id, k_new, v_new):
         written += n
 
     lengths[seq_id] = L + t
+
+# Step 22 - gather_kv_from_blocks
+def gather_kv_from_blocks(allocator, seq_id):
+    t = allocator['seq_lengths'][seq_id]
+    d_model = allocator['d_model']
+    k_blocks = allocator['K_blocks'].reshape(-1, d_model)
+    v_blocks = allocator['V_blocks'].reshape(-1, d_model)
+    k = k_blocks[:t]
+    v = v_blocks[:t]
+    return (k, v)
 

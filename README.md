@@ -31,6 +31,7 @@ python scaffold.py
 - [x] **19.** allocate_block
 - [x] **20.** free_block
 - [x] **21.** append_to_paged_cache
+- [x] **22.** gather_kv_from_blocks
 
 ---
 
