@@ -297,3 +297,13 @@ def paged_attention_step(q, allocator, seq_id):
     output = causal_attention(q, k, v, is_causal=True)
     return output.astype(np.float64)
 
+# Step 24 - free_sequence_blocks
+def free_sequence_blocks(allocator, seq_id):
+    
+    block_ids = allocator['seq_tables'].pop(seq_id, [])
+    for block_id in block_ids:
+        free_block(allocator, block_id)
+
+    if 'seq_lengths' in allocator:
+        allocator['seq_lengths'].pop(seq_id, None)
+
