@@ -361,3 +361,22 @@ def sequence_decode_step(state, params, rng):
     state['last_logits'] = next_last_logits
     return (new_token_id, state)
 
+# Step 29 - is_sequence_done
+def is_sequence_done(state, eos_token_id):
+    
+    gen = state['generated']
+    gen_length = len(gen)
+    max_new_tokens = state['max_new_tokens']
+
+    if gen_length == 0:
+        if max_new_tokens > 0:
+            return False
+        else:
+            return True
+    else:
+        last_token_id = gen[-1]
+        if gen_length >= max_new_tokens or last_token_id == eos_token_id:
+            return True
+        else:
+            return False
+
