@@ -332,3 +332,32 @@ def init_sequence_state(request, params):
     output['max_new_tokens'] = request['max_new_tokens']
     return output
 
+# Step 28 - sequence_decode_step
+def sequence_decode_step(state, params, rng):
+    cache = state['cache']
+    last_logits = state['last_logits']
+    sampling_params = state['sampling_params']
+
+    t = sampling_params.get('temperature')
+    if sampling_params.get('greedy', False) or (t is not None and t <= 0):
+        new_token_id = greedy_select(last_logits)
+    else:
+        if 'temperature' in sampling_params:
+            t = sampling_params['temperature']
+            last_logits = apply_temperature(last_logits, t)
+        if sampling_params.get('top_k', 0) > 0:
+            k = sampling_params['top_k']
+            last_logits = top_k_filter(last_logits, k)
+        if sampling_params.get('top_p', 1) < 1:
+            p = sampling_params['top_p']
+            last_logits = top_p_filter(last_logits, p)
+    
+        probs = stable_softmax(last_logits)
+        new_token_id = sample_from_probs(probs, rng)
+    
+    state['generated'].append(new_token_id)
+    next_last_logits, cache = model_decode_step(new_token_id, cache, params)
+    state['cache'] = cache
+    state['last_logits'] = next_last_logits
+    return (new_token_id, state)
+
