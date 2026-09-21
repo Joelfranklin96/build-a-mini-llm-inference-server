@@ -45,6 +45,7 @@ python scaffold.py
 - [x] **33.** static_batch_generate
 - [x] **34.** has_free_capacity
 - [x] **35.** continuous_batch_step
+- [x] **36.** run_continuous_batching
 
 ---
 
