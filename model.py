@@ -491,3 +491,51 @@ def has_free_capacity(allocator, required_blocks):
     else:
         return False
 
+# Step 35 - continuous_batch_step
+def continuous_batch_step(params, running, allocator, sampling_config):
+    """Advance every active sequence in `running` by one decoded token using the paged allocator."""
+    rng = sampling_config.get('rng')
+    if rng is None:
+        rng = np.random.default_rng()
+
+    for req in running:
+
+        if req['done']:
+            continue
+        if len(req['generated']) >= req['max_new_tokens']:
+            req['done'] = True
+            continue
+        seq_id = req['request_id']
+        last_token_id = req['token_ids'][-1]
+        last_token_embedding = embed_tokens([last_token_id], params['embedding'])
+        q = linear_projection(last_token_embedding, params['Wq'])
+        k_new = linear_projection(last_token_embedding, params['Wk'])
+        v_new = linear_projection(last_token_embedding, params['Wv'])
+        append_to_paged_cache(allocator, seq_id, k_new, v_new)
+        output = paged_attention_step(q, allocator, seq_id)
+        final_output = linear_projection(output, params['Wo'])
+        logits = linear_projection(final_output, params['W_out'])
+        logits = logits[0]
+
+        t = sampling_config.get('temperature')
+        if sampling_config.get('greedy', False) or (t is not None and t <= 0):
+            next_token_id = greedy_select(logits)
+        else:
+            if t is not None:
+                logits = apply_temperature(logits, t)
+            if sampling_config.get('top_k', 0) > 0:
+                logits = top_k_filter(logits, sampling_config['top_k'])
+            if sampling_config.get('top_p', 1.0) < 1.0:
+                logits = top_p_filter(logits, sampling_config['top_p'])
+            next_token_id = sample_from_probs(stable_softmax(logits), rng)
+        
+        req['token_ids'].append(next_token_id)
+        req['generated'].append(next_token_id)
+        req['length'] += 1
+
+        new_tokens = len(req['generated'])
+        if (new_tokens >= req['max_new_tokens'] or req['token_ids'][-1] == sampling_config.get('eos_token_id')):
+            req['done'] = True
+    
+    return running
+

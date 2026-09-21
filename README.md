@@ -44,6 +44,7 @@ python scaffold.py
 - [x] **32.** batched_decode_step
 - [x] **33.** static_batch_generate
 - [x] **34.** has_free_capacity
+- [x] **35.** continuous_batch_step
 
 ---
 
