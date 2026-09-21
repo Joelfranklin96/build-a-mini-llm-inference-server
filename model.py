@@ -195,9 +195,9 @@ def model_prefill(token_ids, params):
     cache = init_kv_cache(max_seq_len, d_model)
     cache = append_kv(cache, K, V)
     output = causal_attention(Q, K, V, is_causal=True)
-    final_output = np.matmul(output, Wo)
+    final_output = linear_projection(output, Wo)
     last_position = final_output[-1]
-    logits = np.matmul(last_position.astype(np.float64), W_out.astype(np.float64))
+    logits = linear_projection(last_position.astype(np.float64), W_out.astype(np.float64))
     return (logits, cache)
 
 # Step 16 - model_decode_step
@@ -379,4 +379,115 @@ def is_sequence_done(state, eos_token_id):
             return True
         else:
             return False
+
+# Step 30 - generate_single_sequence
+def generate_single_sequence(request, params, eos_token_id, rng):
+    state = init_sequence_state(request, params)
+    while not(is_sequence_done(state, eos_token_id)):
+        next_token_id, state = sequence_decode_step(state, params, rng)
+    
+    return state['generated']
+
+# Step 31 - build_batch_step_input
+import numpy as np
+
+def build_batch_step_input(sequences):
+
+    active_indices = []
+    input_ids = []
+    for i, sequence in enumerate(sequences):
+        if not(sequence['done']):
+            active_indices.append(i)
+            input_ids.append(sequence['token_ids'][-1])
+    
+    return {'active_indices': active_indices, 'input_ids': np.array(input_ids, dtype=np.int64)}
+
+# Step 32 - batched_decode_step
+def batched_decode_step(params, sequences, sampling_params, rng=None):
+    """Advance every active sequence by one token in lockstep; mutates and returns sequences."""
+    if rng is None:
+        rng = sampling_params.get('rng')
+    if rng is None:
+        rng = np.random.default_rng()
+
+    for seq in sequences:
+        if seq['done']:
+            continue
+
+        logits, seq['kv_cache'] = model_decode_step(seq['token_ids'][-1], seq['kv_cache'], params)
+
+        t = sampling_params.get('temperature')
+        if sampling_params.get('greedy', False) or (t is not None and t <= 0):
+            next_token = greedy_select(logits)
+        else:
+            if t is not None:
+                logits = apply_temperature(logits, t)
+            if sampling_params.get('top_k', 0) > 0:
+                logits = top_k_filter(logits, sampling_params['top_k'])
+            if sampling_params.get('top_p', 1.0) < 1.0:
+                logits = top_p_filter(logits, sampling_params['top_p'])
+            next_token = sample_from_probs(stable_softmax(logits), rng)
+
+        seq['token_ids'].append(next_token)
+
+    return sequences
+
+# Step 33 - static_batch_generate
+def static_batch_generate(params, requests, sampling_config, max_new_tokens, rng=None):
+    """Run prefill for all requests, then iterate batched decode steps until each
+    sequence hits its per-request budget or the global max_new_tokens cap."""
+
+    if rng is None:
+        rng = sampling_config.get('rng') or np.random.default_rng()
+
+    sequences = []
+    for request in requests:
+        sequence = {}
+        sequence['request_id'] = request['request_id']
+        sequence['budget'] = min(request['max_new_tokens'], max_new_tokens)
+        sequence['token_ids'] = []
+        prompt_token_ids = request['prompt_token_ids']
+        if sequence['budget'] == 0:
+            sequence['done'] = True
+        else:
+            sequence['done'] = False
+            logits, cache = model_prefill(prompt_token_ids, params)
+            sequence['kv_cache'] = cache
+
+            t = sampling_config.get('temperature')
+            if sampling_config.get('greedy', False) or (t is not None and t <= 0):
+                next_token_id = greedy_select(logits)
+            else:
+                if t is not None:
+                    logits = apply_temperature(logits, t)
+                if sampling_config.get('top_k', 0) > 0:
+                    logits = top_k_filter(logits, sampling_config['top_k'])
+                if sampling_config.get('top_p', 1.0) < 1.0:
+                    logits = top_p_filter(logits, sampling_config['top_p'])
+                next_token_id = sample_from_probs(stable_softmax(logits), rng)
+            sequence['token_ids'].append(next_token_id)
+        sequences.append(sequence)
+
+    remaining = sum(1 for seq in sequences if not seq['done'])
+    while remaining > 0:
+        for seq in sequences:
+            if not seq['done'] and len(seq['token_ids']) >= seq['budget']:
+                seq['done'] = True
+                remaining -= 1
+        if remaining == 0:
+            break
+        sequences = batched_decode_step(params, sequences, sampling_config, rng=rng)
+    
+    output = []
+    for seq in sequences:
+        output.append({'request_id': seq['request_id'], 'output_ids': seq['token_ids']})
+    
+    return output
+
+# Step 34 - has_free_capacity
+def has_free_capacity(allocator, required_blocks):
+    if len(allocator['free_list']) >= required_blocks:
+        return True
+    else:
+        return False
 
