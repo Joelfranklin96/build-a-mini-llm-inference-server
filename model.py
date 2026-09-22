@@ -639,3 +639,11 @@ def select_admissions(waiting_heap, allocator, block_size, max_admit):
         count += 1
     return admitted
 
+# Step 40 - preempt_sequence
+def preempt_sequence(sequence, allocator, waiting_heap):
+    free_sequence_blocks(allocator, sequence['request_id'])
+    request = {'request_id': sequence['request_id'], 'prompt_token_ids': sequence['prompt_token_ids'], 
+    'max_new_tokens': sequence['max_new_tokens'], 'priority': sequence['priority']}
+    priority_queue_push(waiting_heap, sequence['priority'], request)
+    return request
+

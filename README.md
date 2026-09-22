@@ -49,6 +49,7 @@ python scaffold.py
 - [x] **37.** priority_queue_push
 - [x] **38.** priority_queue_pop
 - [x] **39.** select_admissions
+- [x] **40.** preempt_sequence
 
 ---
 
