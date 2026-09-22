@@ -544,17 +544,15 @@ def run_continuous_batching(params, requests, allocator, sampling_config, max_st
     """Admit requests while KV blocks allow, decode the running batch one token per step,
     retire finished sequences (freeing their blocks), and return their completions."""
     block_size = allocator['block_size']
-    waiting = sorted(requests, key=lambda r: r.get('priority', 0))   # stable: ties keep list order
+    waiting = sorted(requests, key=lambda r: r.get('priority', 0))
     running = []
     completed = []
     steps = 0
 
     while (waiting or running) and steps < max_steps:
-        # Blocks still owed to running sequences as they grow
         owed = sum(seq['reserved'] - len(allocator['seq_tables'].get(seq['request_id'], []))
                    for seq in running)
 
-        # Admit from the waiting list while the pool can cover each sequence's full length
         while waiting:
             req = waiting[0]
             prompt = list(req['prompt_token_ids'])
@@ -568,7 +566,6 @@ def run_continuous_batching(params, requests, allocator, sampling_config, max_st
                 continue
 
             seq_id = req['request_id']
-            # Write K/V for all prompt tokens except the last; continuous_batch_step writes the last
             if len(prompt) > 1:
                 emb = embed_tokens(prompt[:-1], params['embedding'])
                 append_to_paged_cache(allocator, seq_id,
@@ -587,12 +584,11 @@ def run_continuous_batching(params, requests, allocator, sampling_config, max_st
             owed += need - len(allocator['seq_tables'].get(seq_id, []))
 
         if not running:
-            break   # nothing fits in the pool; avoid spinning until max_steps
+            break
 
         running = continuous_batch_step(params, running, allocator, sampling_config)
         steps += 1
 
-        # Retire finished sequences and return their blocks to the pool
         still_running = []
         for seq in running:
             if seq['done']:
@@ -602,7 +598,6 @@ def run_continuous_batching(params, requests, allocator, sampling_config, max_st
                 still_running.append(seq)
         running = still_running
 
-    # max_steps reached: return in-flight sequences with their partial output
     for seq in running:
         free_sequence_blocks(allocator, seq['request_id'])
         completed.append({'request_id': seq['request_id'], 'output_ids': seq['generated']})
