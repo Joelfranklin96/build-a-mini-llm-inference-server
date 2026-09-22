@@ -622,3 +622,20 @@ def priority_queue_pop(heap):
         return request
     return None
 
+# Step 39 - select_admissions
+def select_admissions(waiting_heap, allocator, block_size, max_admit):
+    count = 0
+    admitted = []
+    blocks_req = 0
+    while len(waiting_heap) > 0 and count < max_admit:
+        request = waiting_heap[0][-1]
+        total_tokens = len(request['prompt_token_ids'])
+        blocks_req += blocks_needed(total_tokens, block_size)
+        if has_free_capacity(allocator, blocks_req):
+            admitted.append(request)
+            priority_queue_pop(waiting_heap)
+        else:
+            break
+        count += 1
+    return admitted
+

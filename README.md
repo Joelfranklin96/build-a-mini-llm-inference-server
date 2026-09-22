@@ -48,6 +48,7 @@ python scaffold.py
 - [x] **36.** run_continuous_batching
 - [x] **37.** priority_queue_push
 - [x] **38.** priority_queue_pop
+- [x] **39.** select_admissions
 
 ---
 
