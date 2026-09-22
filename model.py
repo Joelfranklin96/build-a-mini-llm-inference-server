@@ -647,3 +647,16 @@ def preempt_sequence(sequence, allocator, waiting_heap):
     priority_queue_push(waiting_heap, sequence['priority'], request)
     return request
 
+# Step 41 - schedule_step
+def schedule_step(waiting_heap, running, allocator, block_size, max_running):
+
+    while len(running) > max_running:
+        request = running.pop()
+        preempt_sequence(request, allocator, waiting_heap)
+    
+    max_admit = max_running - len(running)
+    
+    newly_admitted = select_admissions(waiting_heap, allocator, block_size, max_admit)
+
+    return {'running': running, 'newly_admitted': newly_admitted}
+
