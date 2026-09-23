@@ -52,6 +52,7 @@ python scaffold.py
 - [x] **40.** preempt_sequence
 - [x] **41.** schedule_step
 - [x] **42.** format_stream_chunk
+- [x] **43.** submit_request
 
 ---
 
