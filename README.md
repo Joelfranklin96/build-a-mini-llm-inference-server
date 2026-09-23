@@ -53,6 +53,7 @@ python scaffold.py
 - [x] **41.** schedule_step
 - [x] **42.** format_stream_chunk
 - [x] **43.** submit_request
+- [x] **44.** drive_until_complete
 
 ---
 

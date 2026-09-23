@@ -674,3 +674,75 @@ def submit_request(server_state, prompt, max_new_tokens, priority, vocab):
     server_state['next_request_id'] += 1
     return request_id
 
+# Step 44 - drive_until_complete
+def drive_until_complete(server_state, params, allocator, sampling_config, vocab, max_steps):
+    steps = 0
+    eos_token_id = server_state.get('eos_token_id', sampling_config.get('eos_token_id', -1))
+    server_state.setdefault("running", [])
+    server_state.setdefault("completed", {})
+    server_state.setdefault("streams", {})
+    block_size = allocator.get('block_size')
+    max_running = server_state.get('max_running', 4)
+    output = []
+    while (server_state['waiting_heap'] or server_state['running']) and steps < max_steps:
+        hashmap = schedule_step(server_state['waiting_heap'], server_state['running'], allocator, block_size, max_running)
+        server_state['running'] = hashmap['running']
+        newly_admitted = hashmap['newly_admitted']
+        if len(server_state['running']) == 0 and len(newly_admitted) == 0:
+            break
+        for admit in newly_admitted:
+            admit['done'] = False
+            admit['generated'] = []
+            admit['token_ids'] = list(admit['prompt_token_ids'])
+            admit['length'] = 0
+            seq_id = admit['request_id']
+            prompt_token_ids = admit['prompt_token_ids']
+            if len(prompt_token_ids) == 0:
+                server_state['completed'][seq_id] = {'request_id': seq_id, 'output_ids': [], 
+                'chunks': [], 'finish_reason' : 'length'}
+                server_state['streams'][seq_id] = []
+                admit['done'] = True
+                continue
+            prompt_token_ids = prompt_token_ids[:-1]
+            if len(prompt_token_ids) == 0:
+                server_state['running'].append(admit)
+                continue
+            embeddings = embed_tokens(prompt_token_ids, params['embedding'])
+            Wk, Wv = params['Wk'], params['Wv']
+            k_new = linear_projection(embeddings, Wk)
+            v_new = linear_projection(embeddings, Wv)
+            append_to_paged_cache(allocator, seq_id, k_new, v_new)
+            server_state['running'].append(admit)
+        
+        server_state['running'] = continuous_batch_step(params, server_state['running'], allocator, sampling_config)
+        running = []
+        for req in server_state['running']:
+            seq_id = req['request_id']
+            if len(req['generated']) == 0:
+                server_state['completed'][seq_id] = {'request_id': seq_id, 'output_ids': req['generated'], 
+                'chunks': [], 'finish_reason': 'length'}
+                server_state['streams'][seq_id] = []
+                free_sequence_blocks(allocator, seq_id)
+                continue
+            latest_token_id = req['generated'][-1]
+            latest_token_text = vocab['id_to_token'][latest_token_id]
+            latest_chunk = format_stream_chunk(seq_id, latest_token_id, latest_token_text, req['done'])
+            output.append(latest_chunk)
+            if seq_id not in server_state['streams']:
+                server_state['streams'][seq_id] = []
+            server_state['streams'][seq_id].append(latest_chunk)
+            if req['done']:
+                if latest_token_id == eos_token_id:
+                    finish_reason = 'stop'
+                else:
+                    finish_reason = 'length'
+                server_state['completed'][seq_id] = {'request_id': seq_id, 'output_ids': req['generated'], 
+                'chunks': server_state['streams'][seq_id], 'finish_reason' : finish_reason}
+                free_sequence_blocks(allocator, seq_id)
+            else:
+                running.append(req)
+        server_state['running'] = running
+        steps += 1
+    
+    return output
+
