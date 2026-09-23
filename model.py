@@ -769,17 +769,22 @@ def build_completion_response(server_state, request_id, vocab):
 
 # Step 47 - time_to_first_token
 def time_to_first_token(events):
-    output = {}
-    for i in range(len(events)):
+    l = len(events)
+    submits = {}
+    minimum_time = {}
+    for i in range(l):
         if events[i]['event'] == 'submit':
-            j = i + 1
-            minimum = float('inf')
-            while j < len(events):
-                if events[i]['request_id'] == events[j]['request_id'] and events[j]['event'] == 'token' and events[j]['time'] < minimum:
-                    minimum = events[j]['time']
-                j += 1
-            if minimum != float('inf'):
-                output[events[i]['request_id']] = minimum - events[i]['time']
+            submits[events[i]['request_id']] = events[i]['time']
+        elif events[i]['event'] == 'token':
+            request_id = events[i]['request_id']
+            if request_id not in minimum_time:
+                minimum_time[request_id] = float('inf')
+            minimum_time[request_id] = min(minimum_time[request_id], events[i]['time'])
+    
+    output = {}
+    for r_id in submits.keys():
+        if r_id in minimum_time:
+            output[r_id] = minimum_time[r_id] - submits[r_id]
     
     return output
 
