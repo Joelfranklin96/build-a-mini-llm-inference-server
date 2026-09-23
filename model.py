@@ -767,3 +767,19 @@ def build_completion_response(server_state, request_id, vocab):
     return {'request_id': request_id, 'text': text, 'output_ids': list(output['output_ids']),
     'finish_reason': server_state['completed'][request_id].get('finish_reason', 'stop')}
 
+# Step 47 - time_to_first_token
+def time_to_first_token(events):
+    output = {}
+    for i in range(len(events)):
+        if events[i]['event'] == 'submit':
+            j = i + 1
+            minimum = float('inf')
+            while j < len(events):
+                if events[i]['request_id'] == events[j]['request_id'] and events[j]['event'] == 'token' and events[j]['time'] < minimum:
+                    minimum = events[j]['time']
+                j += 1
+            if minimum != float('inf'):
+                output[events[i]['request_id']] = minimum - events[i]['time']
+    
+    return output
+
