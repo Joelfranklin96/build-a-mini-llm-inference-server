@@ -681,6 +681,7 @@ def drive_until_complete(server_state, params, allocator, sampling_config, vocab
     server_state.setdefault("running", [])
     server_state.setdefault("completed", {})
     server_state.setdefault("streams", {})
+    server_state.setdefault("waiting_heap", [])
     block_size = allocator.get('block_size')
     max_running = server_state.get('max_running', 4)
     output = []
