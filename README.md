@@ -55,6 +55,7 @@ python scaffold.py
 - [x] **43.** submit_request
 - [x] **44.** drive_until_complete
 - [x] **45.** collect_request_output
+- [x] **46.** build_completion_response
 
 ---
 
