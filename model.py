@@ -763,6 +763,7 @@ def build_completion_response(server_state, request_id, vocab):
     if not output:
         return None
     
+    
     text = decode_tokens(output['output_ids'], vocab)
     return {'request_id': request_id, 'text': text, 'output_ids': list(output['output_ids']),
     'finish_reason': server_state['completed'][request_id].get('finish_reason', 'stop')}
