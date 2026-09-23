@@ -747,3 +747,13 @@ def drive_until_complete(server_state, params, allocator, sampling_config, vocab
     
     return output
 
+# Step 45 - collect_request_output
+def collect_request_output(server_state, request_id):
+    if request_id not in server_state.get('completed', {}):
+        return None
+    output = {}
+    output['request_id'] = request_id
+    output['output_ids'] = server_state['completed'][request_id]['output_ids']
+    output['chunks'] = server_state['completed'][request_id]['chunks']
+    return output
+
