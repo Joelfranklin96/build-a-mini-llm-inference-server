@@ -840,3 +840,50 @@ def latency_percentiles(latencies, percentiles):
 
     return output
 
+# Step 51 - run_throughput_latency_benchmark
+import time
+def run_throughput_latency_benchmark(params, allocator, vocab, prompts, sampling_config,
+                                     max_new_tokens, max_steps):
+    server_state = {
+        'running': [],
+        'completed': {},
+        'stream_buffer': {},
+        'waiting_heap': [],
+        'next_request_id': 0,
+    }
+    events = []
+    t0 = time.perf_counter()
+
+    for prompt in prompts:
+        r_id = submit_request(server_state, prompt, max_new_tokens, priority, vocab)
+        events.append({'request_id': r_id, 'event': 'submit', 'type': submit, 'time': time.perf_counter() - t0})
+
+    seen = set()
+    for step in range(max_steps):
+        chunks = drive_until_complete(server_state, params, allocator, sampling_config, vocab, max_steps=1)
+        for chunk in chunks:
+            r_id = chunk['request_id']
+            if r_id in seen:
+                if chunk['finished']:
+                    event = {'request_id': r_id, 'event': 'token', 'type': 'finish', 'time': time.perf_counter() - t0}
+                else:
+                    event = {'request_id': r_id, 'event': 'token', 'type': 'token', 'time': time.perf_counter() - t0}
+            else:
+                if chunk['finished']:
+                    event = {'request_id': r_id, 'event': 'first_token', 'type': 'finish', 'time': time.perf_counter() - t0}
+                else:
+                    event = {'request_id': r_id, 'event': 'first_token', 'type': 'token', 'time': time.perf_counter() - t0}
+                    seen.add(r_id)
+            events.append(event)
+    
+    total_time = time.perf_counter() - t0
+    ttft = time_to_first_token(events)
+    latencies = [ttft[key] for key in ttft.keys()]
+    itl = inter_token_latency(events)
+    throughput = aggregate_throughput(events, total_time)
+    percentiles = latency_percentiles(latencies, sampling_config.get('percentiles', [50, 90, 99]))
+    output = {'ttft': ttft, 'itl': itl, 'throughput': throughput, 'percentiles': percentiles,
+    'total_time': total_time}
+
+    return output
+
