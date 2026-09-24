@@ -668,7 +668,7 @@ def format_stream_chunk(request_id, token_id, token_text, finished):
 # Step 43 - submit_request
 def submit_request(server_state, prompt, max_new_tokens, priority, vocab):
     prompt_token_ids = encode_prompt(prompt, vocab)
-    request_id = 'req-{}'.format(ss['next_request_id'])
+    request_id = 'req-{}'.format(server_state['next_request_id'])
     request = {'request_id': request_id, 'prompt_token_ids': prompt_token_ids, 'max_new_tokens': max_new_tokens, 'priority': priority}
     priority_queue_push(server_state['waiting_heap'], priority, request)
     server_state['next_request_id'] += 1
