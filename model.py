@@ -788,3 +788,29 @@ def time_to_first_token(events):
     
     return output
 
+# Step 48 - inter_token_latency
+def inter_token_latency(events):
+    times = {}
+    for i in range(len(events)):
+        if events[i]['event'] == 'token':
+            r_id = events[i]['request_id']
+            if r_id not in times:
+                times[r_id] = []
+            times[r_id].append(events[i]['time'])
+    
+    output = {}
+    for key in times.keys():
+        arr = times[key]
+        arr.sort()
+        if len(arr) <= 1:
+            output[key] = 0.0
+            continue
+        count = 0
+        total = 0
+        for i in range(len(arr) - 1):
+            total += arr[i+1] - arr[i]
+            count += 1
+        output[key] = total/count
+    
+    return output
+
