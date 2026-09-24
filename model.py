@@ -814,3 +814,16 @@ def inter_token_latency(events):
     
     return output
 
+# Step 49 - aggregate_throughput
+def aggregate_throughput(events, total_time):
+    total_tokens = 0
+    total_requests = 0
+    for event in events:
+        if event['type'] == 'first_token' or event['type'] == 'token':
+            total_tokens += 1
+        elif event['type'] == 'finish':
+            total_requests += 1
+    
+    return {'tokens_per_second': total_tokens/total_time, 'requests_per_second': total_requests/total_time,
+    'total_tokens': total_tokens, 'total_requests': total_requests}
+
