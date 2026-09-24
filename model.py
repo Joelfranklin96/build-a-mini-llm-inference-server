@@ -829,3 +829,14 @@ def aggregate_throughput(events, total_time):
 
     return output
 
+# Step 50 - latency_percentiles
+def latency_percentiles(latencies, percentiles):
+    if len(latencies) == 0:
+        return {float(p): 0.0 for p in percentiles}
+    
+    output = {}
+    for p in percentiles:
+        output[float(p)] = float(np.percentile(latencies, p))
+
+    return output
+
