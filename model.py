@@ -824,6 +824,8 @@ def aggregate_throughput(events, total_time):
         elif event['type'] == 'finish':
             total_requests += 1
     
-    return {'tokens_per_second': total_tokens/total_time, 'requests_per_second': total_requests/total_time,
+    output = {'tokens_per_second': total_tokens/total_time, 'requests_per_second': total_requests/total_time,
     'total_tokens': total_tokens, 'total_requests': total_requests}
+
+    return output
 
