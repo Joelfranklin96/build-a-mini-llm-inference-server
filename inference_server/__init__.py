@@ -1,0 +1,130 @@
+"""A NumPy LLM inference server with a paged KV cache and continuous batching.
+
+The package is layered bottom-up: :mod:`sampling` and :mod:`tokenizer` are standalone,
+:mod:`transformer` builds on sampling, :mod:`paged_cache` on the transformer, :mod:`batching`
+and :mod:`scheduler` on the cache, :mod:`server` on both, and :mod:`benchmark` on the server.
+"""
+
+from .batching import (
+    batched_decode_step,
+    build_batch_step_input,
+    continuous_batch_step,
+    generate_single_sequence,
+    init_sequence_state,
+    is_sequence_done,
+    make_request,
+    run_continuous_batching,
+    sequence_decode_step,
+    static_batch_generate,
+)
+from .benchmark import run_throughput_latency_benchmark
+from .metrics import (
+    aggregate_throughput,
+    inter_token_latency,
+    latency_percentiles,
+    time_to_first_token,
+)
+from .paged_cache import (
+    allocate_block,
+    append_to_paged_cache,
+    blocks_needed,
+    free_block,
+    free_sequence_blocks,
+    gather_kv_from_blocks,
+    has_free_capacity,
+    init_block_allocator,
+    kv_blocks_in_use,
+    paged_attention_step,
+)
+from .sampling import (
+    apply_temperature,
+    greedy_select,
+    resolve_rng,
+    sample_from_probs,
+    select_next_token,
+    stable_softmax,
+    top_k_filter,
+    top_p_filter,
+)
+from .scheduler import (
+    preempt_sequence,
+    priority_queue_pop,
+    priority_queue_push,
+    schedule_step,
+    select_admissions,
+)
+from .server import (
+    build_completion_response,
+    collect_request_output,
+    drive_until_complete,
+    format_stream_chunk,
+    submit_request,
+)
+from .tokenizer import build_vocab, decode_tokens, encode_prompt
+from .transformer import (
+    append_kv,
+    causal_attention,
+    embed_tokens,
+    init_kv_cache,
+    init_model_params,
+    linear_projection,
+    model_decode_step,
+    model_prefill,
+)
+
+__all__ = [
+    'aggregate_throughput',
+    'allocate_block',
+    'append_kv',
+    'append_to_paged_cache',
+    'apply_temperature',
+    'batched_decode_step',
+    'blocks_needed',
+    'build_batch_step_input',
+    'build_completion_response',
+    'build_vocab',
+    'causal_attention',
+    'collect_request_output',
+    'continuous_batch_step',
+    'decode_tokens',
+    'drive_until_complete',
+    'embed_tokens',
+    'encode_prompt',
+    'format_stream_chunk',
+    'free_block',
+    'free_sequence_blocks',
+    'gather_kv_from_blocks',
+    'generate_single_sequence',
+    'greedy_select',
+    'has_free_capacity',
+    'init_block_allocator',
+    'init_kv_cache',
+    'init_model_params',
+    'init_sequence_state',
+    'inter_token_latency',
+    'is_sequence_done',
+    'kv_blocks_in_use',
+    'latency_percentiles',
+    'linear_projection',
+    'make_request',
+    'model_decode_step',
+    'model_prefill',
+    'paged_attention_step',
+    'preempt_sequence',
+    'priority_queue_pop',
+    'priority_queue_push',
+    'resolve_rng',
+    'run_continuous_batching',
+    'run_throughput_latency_benchmark',
+    'sample_from_probs',
+    'schedule_step',
+    'select_admissions',
+    'select_next_token',
+    'sequence_decode_step',
+    'stable_softmax',
+    'static_batch_generate',
+    'submit_request',
+    'time_to_first_token',
+    'top_k_filter',
+    'top_p_filter',
+]
